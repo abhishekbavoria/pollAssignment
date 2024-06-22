@@ -10,6 +10,9 @@ const Validator = require('validatorjs');
 const jwt = require("jsonwebtoken");
 require('dotenv').config();
 
+
+let tokenSecret = process.env.JWT_SECRET || "PollingJWT"
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -67,7 +70,7 @@ const verifyToken = (req, res, next) => {
         token = token.slice(7, token.length);
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, tokenSecret, (err, decoded) => {
         if (err) return res.status(500).send('Failed to authenticate token');
         req.userId = decoded.id;
         next();
@@ -123,7 +126,7 @@ app.post('/login', async (req, res) => {
                 return res.status(401).send('Invalid username or password');
             }
 
-            const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: 86400 });
+            const token = jwt.sign({ id: user._id }, tokenSecret, { expiresIn: 86400 });
             res.status(200).json({ userId: user.id, username: user.username, id: user._id.toString(), token });
         })
         .catch(err => res.status(500).send('Error logging in'));
@@ -162,7 +165,7 @@ io.on('connection', (socket) => {
         .catch(err => console.log('Error fetching polls:', err));
 
     socket.on('authenticate', ({ token }) => {
-        jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        jwt.verify(token, tokenSecret, (err, decoded) => {
             if (err) {
                 socket.emit('unauthorized', 'Invalid token');
                 return;
